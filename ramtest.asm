@@ -1,34 +1,38 @@
-; *******************************************************************
-; ***                    32K RAM test 
-; *** Circa 2015 Written by Mike Riley to run in Diskless ROM at 0F300h
-; *** 2023/01/04 Modified by Bernie Murphy to run in extended memory
-; ***         on David Madole's Mini System
-; ******************************************************************** 
+;----------------------------------------------------------------------
+; Test lower 32K RAM in compatible 1802 Mini System
+;
+; Copyright 2023 by Bernard Murphy
+;
+;
+; Based on code from the Elfos-diskless distribution  
+; Written by Michael H Riley
+; Copyright 2015 by Micheal H Riley
+;
+;-----------------------------------------------------------------------
 
-
-#include bios.inc                      ;Only need BIOS routines
+#include bios.inc                      ; only need BIOS routines
 #include ops.inc
 
 
-           org     7ffah
-           dw      8000h               ; Exec header, where program loads
-pgmlen:    dw      endrom-8000h        ; Length of program to load
-           dw      8000h               ; exec address
+           org     9000h-6
+           dw      9000h               ; exec header, where program loads
+           dw      endrom-9000h        ; Length of program to load
+           dw      9000h               ; exec address
 
-stack:     equ     0f000h              ; need some stack space
+stack:     equ     07fffh              ; need some stack space
 startmem:  equ     0                   ; start memory to test
-endmem:    equ     07fffh              ; end of memory to test 
+endmem:    equ     07ff0h              ; end of memory to test 
 
 
 
-           org     8000h
+           org     9000h               ; load program out of tested RAM area
 
            br      entry
            DB      81h                 ; 1st month-upper bit indicates extended hdr
-           DB      04                  ; the 4th day of the month
+           DB      30                  ; the 4th day of the month
            DW      2023                ; the year
-           DW      3                   ; indicate that this is build 7 of the program
-           DB      'RAMTest lower 32K' ; text for the Elf OS version command 
+           DW      5                   ; indicate that this is build4 of the program
+           DB      '(c)Written by Bernard Murphy see https://github.com/BernieMurphy' 
            DB   0          
 
 entry:     mov     r2,stack
@@ -36,7 +40,7 @@ entry:     mov     r2,stack
            lbr     f_initcall
 start:     sep     scall               ; display message
            dw      f_inmsg
-           db      'RAMtest v3.0',10,13,'Test 1',10,13,0
+           db      'RAMtest Lower 32K',10,13,'Test 1 - 0 and 1 in each cell',10,13,0
            mov     ra,hexout           ; address of hexout routine
            mov     rf,startmem
 ; TEST 1 write all zeros and all ones in each cell and verify
@@ -64,7 +68,7 @@ test1no:   sep     scall               ; display error
 
 test2:     sep     scall               ; display message for test 2
            dw      f_inmsg
-           db      'Test 2',10,13,0
+           db      'Test 2 - block # in each block',10,13,0
            mov     rf,startmem
 ; TEST 2 write each block number in each cell and vefiy
 test2_1:   ghi     rf                  ; get block number
@@ -93,7 +97,7 @@ test2no:   sep     scall               ; display error
 
 test3:     sep     scall               ; display message for test 3
            dw      f_inmsg
-           db      'Test 3',10,13,0
+           db      'Test 3 - inverted block # in each block',10,13,0
            mov     rf,endmem
 ; TEST 3 write inverted block number in each cell and verify
 test3_1:   ghi     rf                  ; get block number
@@ -124,7 +128,7 @@ test3no:   sep     scall               ; display error
 
 test4:     sep     scall               ; display message for test 4
            dw      f_inmsg
-           db      'Test 4',10,13,0
+           db      'Test 4 - block number in each cell',10,13,0
            mov     rf,startmem
 test4_1:   glo     rf                  ; get byte number
            str     rf                  ; store it
@@ -150,7 +154,7 @@ test4no:   sep     scall               ; display error
 
 test5:     sep     scall               ; display message for test 5
            dw      f_inmsg
-           db      'Test 5',10,13,0
+           db      'Test 5 - all values in each cell',10,13,0
            ldi     0                   ; start with zero byte
            plo     r9                  ; store here
 ; TEST 5 write all values in all tested memory cells
@@ -183,7 +187,8 @@ test5no:   ldn     rf                  ; get byte from memory
 done:      sep     scall               ; display conclusion message
            dw      f_inmsg
            db      10,13,10,13,'Tests complete. Reboot system',10,13,0
-           lbr     f_boot             ; boot the system
+           mov     r0,f_boot
+           sep     r0                  ; boot the system, hopefully
 
 
 
